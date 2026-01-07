@@ -15,6 +15,9 @@ def open_airbnb():
         "--hide-crash-restore-bubble",
         "--restore-last-session=false",      # 不恢复上次会话
         "--disable-session-crashed-bubble",  # 禁用崩溃后的气泡提示
+        "--disable-session-crashed-bubble", 
+        "--hide-crash-restore-bubble", 
+        "--disable-features=SessionRestore,ForceSessionRestore",
     ]
     playwright = sync_playwright().start()
     context = playwright.chromium.launch_persistent_context(
