@@ -47,15 +47,88 @@ def open_airbnb():
     return playwright, context, last_page
 
 def find_candidate(page, name=""):
-    page.get_by_role("link", name="Switch to hosting").click()
-    humain_wait()
-    page.get_by_role("link", name="Messages").click()
-    humain_wait()
+   page.get_by_role("link", name="Switch to hosting").click()
+   humain_wait()
+   page.get_by_role("link", name="Messages").click()
+   humain_wait()
+
+   inbox = page.get_by_role("group", name="List of Conversations")
+   humain_wait()
+   inbox.locator('div[data-listrow="true"]').first.wait_for()
+   messages = inbox.locator('div[data-listrow="true"]').all()
+   humain_wait()
+   print(f"in total we have {len(messages)} messages")
+   # for message in messages:
+   #    humain_wait()
+   #    summary = message.locator("a span").first.inner_text()
+   #    print(summary)
+   
+   name = name.lower()
+   is_found = False
+   for message in messages:
+      humain_wait()
+      summary = message.locator("a span").first.inner_text().lower()
+      print(summary)
+      if(summary.find(name) != -1):
+          print(f"finding the person {name} message")
+          message.click()
+          humain_wait()
+          is_found = True
+          break
+   return is_found
+
+def find_home_details(page):
+   detail_section=page.get_by_test_id("orbital-panel-details")
+   humain_wait()
+   detail_section.wait_for(state="visible")
+   humain_wait()
+   guest_section = detail_section.get_by_test_id("hrd-sbui-about-guest-section")
+   humain_wait()
+   name = guest_section.locator("h3").inner_text()
+   humain_wait()
+   print(name)
+   details = guest_section.locator("span.tffussy").all_inner_texts()
+   humain_wait()
+   print(details)
+   return name, details
+
+def find_reviews(page):
+   with page.expect_popup() as review_page_popup:
+        page.get_by_role("link", name="Show profile").click()
+   humain_wait()
+   review_page = review_page_popup.value
+   humain_wait()
+   show_all_button = review_page.get_by_role("button").get_by_text("Show", exact=False)
+   humain_wait()
+   while show_all_button.count() > 0:
+      show_all_button.click()
+      humain_wait()
+      show_all_button = review_page.get_by_role("button").get_by_text("Show", exact=False)
+      humain_wait()
+   humain_wait()
+
+   review_tabs = review_page.locator("#user-profile-review-tabs")
+   humain_wait()
+   review_groups = review_tabs.get_by_role("group").all()
+   humain_wait()
+   review_data = []
+   for group in review_groups:
+       content = group.locator('div[id^="review-"] > div').first.inner_text()
+      #  humain_wait()
+       review_data.append(content)
+   print(review_data)
+   review_page.close()
+   humain_wait()
+   return review_data
 
 def main():
     pw, context, page = open_airbnb()
     try:
-        find_candidate(page)
+        is_found = find_candidate(page, "Amir")
+        if is_found:
+            name, details = find_home_details(page)
+            review_data = find_reviews(page)
+            print("now we can call ai")
     finally:
         if context:
             context.close()
