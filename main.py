@@ -12,13 +12,14 @@ def open_airbnb():
         "--start-maximized",
         "--disable-extensions",
         "--disable_blink_features=AutomationControlled",
+        "--hide-crash-restore-bubble",
         "--restore-last-session=false",      # 不恢复上次会话
         "--disable-session-crashed-bubble",  # 禁用崩溃后的气泡提示
     ]
     playwright = sync_playwright().start()
     context = playwright.chromium.launch_persistent_context(
         user_data_dir="./airbnb_profile",
-        channel="chrome",
+        channel="msedge",
         headless=False,
         no_viewport=True,
         args=chrome_args,
@@ -26,11 +27,21 @@ def open_airbnb():
         timezone_id="America/Vancouver",
         slow_mo=50,
     )
-    page = context.pages[0]
-    page.goto("https://www.airbnb.ca")
+    time.sleep(3)
+    last_page = context.new_page()
+    time.sleep(1)
+    pages = context.pages
+    for item in list(pages):
+        if item != last_page:
+            try:
+                item.close()
+            except:
+                pass
+
+    last_page.goto("https://www.airbnb.ca")
     humain_wait()
         
-    return playwright, context, page
+    return playwright, context, last_page
 
 def find_candidate(page, name=""):
     page.get_by_role("link", name="Switch to hosting").click()
@@ -43,8 +54,12 @@ def main():
     try:
         find_candidate(page)
     finally:
-        context.close()
-        pw.stop()
+        if context:
+            context.close()
+            time.sleep(2)
+
+        if pw:
+            pw.stop()
 
 if __name__ == "__main__":
     main()
