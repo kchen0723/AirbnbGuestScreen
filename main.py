@@ -1,6 +1,7 @@
 import random
 import time
 from playwright.sync_api import sync_playwright
+from transformers import pipeline
 
 def humain_wait(min=1000, max=4000):
     random_time = random.randint(min, max) / 1000
@@ -121,14 +122,37 @@ def find_reviews(page):
    humain_wait()
    return review_data
 
+def process_review(reviews):
+    classifier = pipeline("zero-shot-classification", model="MoritzLaurer/mDeBERTa-v3-base-mnli-xnli")
+    candidate_labels = [
+    "positive experience", "negative experience",
+    "cleanliness", "location", "communication",
+    "value", "amenities", "check-in issues",
+    "noise complaint"
+    ]
+    result = []
+    for review in reviews:
+        classifier_result = classifier(review, candidate_labels, multi_label=True)
+        classifier_dict = dict(zip(classifier_result['labels'], classifier_result['scores']))
+        review_result = {
+            'review_text': classifier_result['sequence'], 
+            **classifier_dict
+            }
+        result.append(review_result)
+    return result
+
 def main():
+    pw = None
+    context = None
     pw, context, page = open_airbnb()
     try:
         is_found = find_candidate(page, "Amir")
         if is_found:
             name, details = find_home_details(page)
             review_data = find_reviews(page)
-            print("now we can call ai")
+            if len(review_data) > 0:
+                review_result = process_review(review_data)
+                print(review_result)
     finally:
         if context:
             context.close()
