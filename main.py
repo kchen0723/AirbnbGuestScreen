@@ -1,7 +1,8 @@
 import random
 import time
 from playwright.sync_api import sync_playwright
-from transformers import pipeline
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, NllbTokenizer
+from easynmt import EasyNMT
 
 def humain_wait(min=1000, max=4000):
     random_time = random.randint(min, max) / 1000
@@ -132,14 +133,42 @@ def process_review(reviews):
     ]
     result = []
     for review in reviews:
+        review_english = translate(review)
         classifier_result = classifier(review, candidate_labels, multi_label=True)
         classifier_dict = dict(zip(classifier_result['labels'], classifier_result['scores']))
         review_result = {
-            'review_text': classifier_result['sequence'], 
+            'review_text': review, 
+            'review_english': review_english, 
             **classifier_dict
             }
         result.append(review_result)
     return result
+
+# def translate(text):
+#     model_name = "facebook/nllb-200-distilled-600M"
+#     tokenizer = NllbTokenizer.from_pretrained(
+#         model_name, 
+#         src_lang="zho_Hans", 
+#         tgt_lang="jpn_Jpan"
+#     )
+#     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+#     inputs = tokenizer(text, return_tensors="pt")
+#     translated_tokens = model.generate(**inputs, forced_bos_token_id=tokenizer.covert_tokens_to_ids("jpn_Jpan"))
+#     result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
+
+#     print(result)
+#     return result
+
+def translate(text):
+    # model = EasyNMT("opus-mt")
+    result = ""
+    try:
+        model = EasyNMT("m2m_100_418M")
+        result = model.translate(text, target_lang="en")
+        return result
+    except BaseException as e:
+        return result
 
 def main():
     pw = None
