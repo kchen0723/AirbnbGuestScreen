@@ -1,8 +1,9 @@
 import random
 import time
 from playwright.sync_api import sync_playwright
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM, NllbTokenizer
-from easynmt import EasyNMT
+import torch
+from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
+# from easynmt import EasyNMT
 
 def humain_wait(min=1000, max=4000):
     random_time = random.randint(min, max) / 1000
@@ -144,31 +145,37 @@ def process_review(reviews):
         result.append(review_result)
     return result
 
-# def translate(text):
-#     model_name = "facebook/nllb-200-distilled-600M"
-#     tokenizer = NllbTokenizer.from_pretrained(
-#         model_name, 
-#         src_lang="zho_Hans", 
-#         tgt_lang="jpn_Jpan"
-#     )
-#     model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-
-#     inputs = tokenizer(text, return_tensors="pt")
-#     translated_tokens = model.generate(**inputs, forced_bos_token_id=tokenizer.covert_tokens_to_ids("jpn_Jpan"))
-#     result = tokenizer.batch_decode(translated_tokens, skip_special_tokens=True)
-
-#     print(result)
-#     return result
-
 def translate(text):
-    # model = EasyNMT("opus-mt")
-    result = ""
-    try:
-        model = EasyNMT("m2m_100_418M")
-        result = model.translate(text, target_lang="en")
-        return result
-    except BaseException as e:
-        return result
+    model_name = "facebook/nllb-200-distilled-600M"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
+    inputs = tokenizer(
+        text,
+        return_tensors="pt"
+    ).to(device)
+
+    target_lang = "eng_Latn"
+    outputs = model.generate(
+        **inputs,
+        forced_bos_token_id=tokenizer.convert_tokens_to_ids(target_lang),
+        max_length=2048
+    )
+
+    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    return result
+
+
+# def translate(text):
+#     result = ""
+#     try:
+#         model = EasyNMT("m2m_100_418M")
+#         result = model.translate(text, target_lang="en")
+#         return result
+#     except BaseException as e:
+#         return result
 
 def main():
     pw = None
